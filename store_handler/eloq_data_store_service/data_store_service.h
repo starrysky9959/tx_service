@@ -694,6 +694,12 @@ public:
                     int64_t ng_term,
                     uint64_t snapshot_ts,
                     bool from_snapshot);
+    bool ReopenPartition(uint32_t shard_id,
+                         const std::string &table_name,
+                         int32_t partition_id,
+                         bool is_hash_partitioned,
+                         uint64_t pending_time_us,
+                         std::function<void()> callback);
     bool CreateSnapshotForStandby(uint32_t shard_id,
                                   uint32_t ng_id,
                                   uint64_t snapshot_ts);

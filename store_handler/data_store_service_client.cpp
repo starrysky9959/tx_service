@@ -667,6 +667,39 @@ bool DataStoreServiceClient::CompactStore()
     return success;
 }
 
+txservice::store::DataStoreHandler::DataStoreOpStatus
+DataStoreServiceClient::ReopenPartition(const txservice::TableName &table_name,
+                                        int32_t partition_id,
+                                        std::function<void()> callback)
+{
+    if (data_store_service_ == nullptr)
+    {
+        if (callback)
+        {
+            callback();
+        }
+        return DataStoreOpStatus::Error;
+    }
+
+    int32_t kv_part_id =
+        KvPartitionIdOf(partition_id, !table_name.IsHashPartitioned());
+    uint32_t shard_id =
+        GetShardIdByPartitionId(kv_part_id, !table_name.IsHashPartitioned());
+
+    // TODO: Add IsLocalShard(shard_id) / RPC split here for remote DSS
+    // shards, following the pattern used by Read, BatchWriteRecords, etc.
+    // Currently only called when data_store_service_ is local
+    // (bind_data_shard_with_ng_ mode).
+    bool ok = data_store_service_->ReopenPartition(
+        shard_id,
+        table_name.String(),
+        partition_id,
+        table_name.IsHashPartitioned(),
+        10'000'000,  // 10 seconds pending time
+        std::move(callback));
+    return ok ? DataStoreOpStatus::Success : DataStoreOpStatus::Error;
+}
+
 /**
  * @brief Upserts table schema information to the data store.
  *

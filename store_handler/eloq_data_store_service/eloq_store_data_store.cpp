@@ -56,6 +56,25 @@ thread_local ObjectPool<EloqStoreOperationData<::eloqstore::DropTableRequest>>
     eloq_store_drop_table_op_pool_;
 thread_local ObjectPool<ScanDeleteOperationData> eloq_store_scan_del_op_pool_;
 
+struct ReopenOperationData : public Poolable
+{
+    void Reset(std::function<void()> callback)
+    {
+        callback_ = std::move(callback);
+    }
+
+    void Clear() override
+    {
+        callback_ = nullptr;
+        Free();
+    }
+
+    ::eloqstore::ReopenRequest reopen_req_;
+    std::function<void()> callback_;
+};
+
+thread_local ObjectPool<ReopenOperationData> eloq_store_reopen_op_pool_;
+
 inline void BuildKey(const WriteRecordsRequest &write_req,
                      const std::size_t key_first_idx,
                      uint16_t key_parts,
@@ -1042,6 +1061,79 @@ bool EloqStoreDataStore::ReloadData(int64_t term,
     }
     DLOG(INFO) << "ReloadData reopen succeeded, snapshot_ts=" << snapshot_ts
                << ", from_snapshot=" << from_snapshot;
+    return true;
+}
+
+void EloqStoreDataStore::OnReopenPartition(::eloqstore::KvRequest *req)
+{
+    auto *op = reinterpret_cast<ReopenOperationData *>(
+        reinterpret_cast<void *>(req->UserData()));
+    assert(req == &op->reopen_req_);
+
+    PoolableGuard op_guard(op);
+
+    auto callback = std::move(op->callback_);
+    if (callback)
+    {
+        callback();
+    }
+}
+
+bool EloqStoreDataStore::ReopenPartition(const std::string &table_name,
+                                         int32_t partition_id,
+                                         bool is_hash_partitioned,
+                                         uint64_t pending_time_us,
+                                         std::function<void()> callback)
+{
+    if (eloq_store_service_ == nullptr)
+    {
+        if (callback)
+        {
+            callback();
+        }
+        return false;
+    }
+
+    auto *op = eloq_store_reopen_op_pool_.NextObject();
+    if (op == nullptr)
+    {
+        LOG(ERROR) << "ReopenPartition: no available pooled object for table "
+                   << table_name << " partition " << partition_id;
+        if (callback)
+        {
+            callback();
+        }
+        return false;
+    }
+
+    op->Reset(std::move(callback));
+
+    auto &reopen_req = op->reopen_req_;
+    reopen_req.SetArgs(::eloqstore::TableIdent(
+        table_name, static_cast<uint32_t>(partition_id)));
+    reopen_req.SetClean(false);
+    if (pending_time_us > 0)
+    {
+        reopen_req.SetPendingTime(pending_time_us);
+    }
+
+    uint64_t user_data = reinterpret_cast<uint64_t>(op);
+    if (!eloq_store_service_->ExecAsyn(
+            &reopen_req, user_data, OnReopenPartition))
+    {
+        LOG(ERROR) << "ReopenPartition: failed to submit reopen for table "
+                   << table_name << " partition " << partition_id;
+        op->Clear();
+        // Note: callback was moved into op by Reset() above.
+        // Access it through op->callback_ to avoid using the
+        // moved-from local.
+        if (op->callback_)
+        {
+            op->callback_();
+            op->callback_ = nullptr;
+        }
+        return false;
+    }
     return true;
 }
 

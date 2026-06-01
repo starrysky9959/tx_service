@@ -268,6 +268,12 @@ public:
     bool ReloadData(int64_t term,
                     uint64_t snapshot_ts,
                     bool from_snapshot) override;
+
+    bool ReopenPartition(const std::string &table_name,
+                         int32_t partition_id,
+                         bool is_hash_partitioned,
+                         uint64_t pending_time_us,
+                         std::function<void()> callback) override;
     void UpdateStandbyMasterStorePaths(
         const std::vector<std::string> &store_paths,
         const std::vector<uint64_t> &store_path_weights) override;
@@ -282,6 +288,7 @@ private:
     static void OnScanNext(::eloqstore::KvRequest *req);
     static void OnScanDelete(::eloqstore::KvRequest *req);
     static void OnFloor(::eloqstore::KvRequest *req);
+    static void OnReopenPartition(::eloqstore::KvRequest *req);
     void ScanDelete(DeleteRangeRequest *delete_range_req);
     void Floor(ScanRequest *scan_req);
 

@@ -877,6 +877,16 @@ public:
         uint64_t snapshot_read_ts = 0,
         bool only_fetch_archives = false);
 
+#ifdef DATA_STORE_TYPE_ELOQDSS_ELOQSTORE
+    void RequestPartitionReopen(const TableName &table_name,
+                                int32_t partition_id,
+                                TxKey key,
+                                LruEntry *cce,
+                                const TableSchema *tbl_schema,
+                                NodeGroupId ng_id,
+                                int64_t ng_term);
+#endif
+
     store::DataStoreHandler::DataStoreOpStatus FetchSnapshot(
         const TableName &table_name,
         const TableSchema *tbl_schema,
@@ -1280,6 +1290,20 @@ private:
 
     // For load record from kvstore asynchronously
     std::unordered_map<LruEntry *, FetchRecordCc> fetch_record_reqs_;
+
+#ifdef DATA_STORE_TYPE_ELOQDSS_ELOQSTORE
+    // For partition-level reopen batching.
+    // Outer map: table_name → partition_id → (in_flight, cce→key map).
+    // The cce→key map provides natural dedup: same cce won't be added twice.
+    struct PartitionReopenState
+    {
+        bool in_flight{false};
+        absl::flat_hash_map<LruEntry *, TxKey> cces;
+    };
+    absl::flat_hash_map<TableName,
+                        absl::flat_hash_map<int32_t, PartitionReopenState>>
+        pending_partition_reopens_;
+#endif
 
     // For load snapshot from kvstore asynchronously
     CcRequestPool<FetchSnapshotCc> fetch_snapshot_cc_pool_;

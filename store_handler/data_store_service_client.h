@@ -246,6 +246,10 @@ public:
     uint64_t ApproxStoreKeyCount() override;
     bool CompactStore() override;
 
+    DataStoreOpStatus ReopenPartition(const txservice::TableName &table_name,
+                                      int32_t partition_id,
+                                      std::function<void()> callback) override;
+
     /**
      * @brief indicate end of flush entries in a single ckpt for \@param
      * batch to base table or skindex table in data store, stop and return

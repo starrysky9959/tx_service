@@ -2548,6 +2548,33 @@ bool DataStoreService::ReloadData(uint32_t shard_id,
 #endif
 }
 
+bool DataStoreService::ReopenPartition(uint32_t shard_id,
+                                       const std::string &table_name,
+                                       int32_t partition_id,
+                                       bool is_hash_partitioned,
+                                       uint64_t pending_time_us,
+                                       std::function<void()> callback)
+{
+    auto &ds_ref = data_shards_.at(shard_id);
+    if (ds_ref.data_store_ == nullptr ||
+        ds_ref.shard_status_.load() == DSShardStatus::Closed)
+    {
+        LOG(WARNING) << "ReopenPartition: data store not ready for shard "
+                     << shard_id;
+        if (callback)
+        {
+            callback();
+        }
+        return false;
+    }
+
+    return ds_ref.data_store_->ReopenPartition(table_name,
+                                               partition_id,
+                                               is_hash_partitioned,
+                                               pending_time_us,
+                                               std::move(callback));
+}
+
 bool DataStoreService::CreateSnapshotForStandby(uint32_t shard_id,
                                                 uint32_t ng_id,
                                                 uint64_t snapshot_ts)

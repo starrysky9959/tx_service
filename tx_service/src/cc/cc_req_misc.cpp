@@ -850,7 +850,6 @@ bool FetchRecordCc::Execute(CcShard &ccs)
     {
         assert(lock_->GetCcMap() != nullptr);
         assert(lock_->GetCcEntry() == cce_);
-        // if the referenced cce is already invalid, we do not need to care
         // about the fetch result and pending reqs since they are all
         // invalid.
         bool succ;
@@ -887,6 +886,21 @@ bool FetchRecordCc::Execute(CcShard &ccs)
                     ccs.Enqueue(ccs.core_id_, req);
                 }
             }
+
+#ifdef DATA_STORE_TYPE_ELOQDSS_ELOQSTORE
+            if (cce_->HasBufferedCommandList())
+            {
+                int32_t part_id =
+                    Sharder::MapKeyHashToHashPartitionId(tx_key_.Hash());
+                ccs.RequestPartitionReopen(table_name_,
+                                           part_id,
+                                           tx_key_.Clone(),
+                                           cce_,
+                                           table_schema_,
+                                           cc_ng_id_,
+                                           cc_ng_term_);
+            }
+#endif
         }
         else
         {

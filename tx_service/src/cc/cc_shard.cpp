@@ -2031,6 +2031,109 @@ store::DataStoreHandler::DataStoreOpStatus CcShard::FetchRecord(
     return store::DataStoreHandler::DataStoreOpStatus::Success;
 }
 
+#ifdef DATA_STORE_TYPE_ELOQDSS_ELOQSTORE
+void CcShard::RequestPartitionReopen(const TableName &table_name,
+                                     int32_t partition_id,
+                                     TxKey key,
+                                     LruEntry *cce,
+                                     const TableSchema *tbl_schema,
+                                     NodeGroupId ng_id,
+                                     int64_t ng_term)
+{
+    std::string kv_tbl_name =
+        tbl_schema->GetKVCatalogInfo()->GetKvTableName(table_name);
+    auto &state = pending_partition_reopens_[table_name][partition_id];
+    auto [it, inserted] = state.cces.emplace(cce, key.Clone());
+    if (inserted)
+    {
+        cce->GetKeyGapLockAndExtraData()->AddPin();
+    }
+
+    if (state.in_flight)
+    {
+        DLOG(INFO) << "RequestPartitionReopen: partition reopen already in "
+                      "flight, table="
+                   << table_name.String() << " partition=" << partition_id
+                   << " cce=" << cce << " pending_cces=" << state.cces.size();
+        return;
+    }
+    state.in_flight = true;
+
+    DLOG(INFO) << "RequestPartitionReopen: submitting partition reopen, table="
+               << table_name.String() << " partition=" << partition_id
+               << " cce=" << cce << " pending_cces=" << state.cces.size();
+
+    local_shards_.store_hd_->ReopenPartition(
+        TableName(kv_tbl_name, table_name.Type(), table_name.Engine()),
+        partition_id,
+        [this, partition_id, table_name, tbl_schema, ng_id, ng_term]()
+        {
+            DispatchTask(
+                core_id_,
+                [this, partition_id, table_name, tbl_schema, ng_id, ng_term](
+                    CcShard &ccs)
+                {
+                    auto it = ccs.pending_partition_reopens_.find(table_name);
+                    if (it == ccs.pending_partition_reopens_.end())
+                    {
+                        return true;
+                    }
+                    auto part_it = it->second.find(partition_id);
+                    if (part_it == it->second.end())
+                    {
+                        return true;
+                    }
+
+                    auto cces = std::move(part_it->second.cces);
+                    it->second.erase(part_it);
+                    if (it->second.empty())
+                    {
+                        ccs.pending_partition_reopens_.erase(it);
+                    }
+
+                    DLOG(INFO)
+                        << "RequestPartitionReopen: reopen completed, "
+                           "table="
+                        << table_name.String() << " partition=" << partition_id
+                        << " num_cces=" << cces.size();
+
+                    for (auto &[cce_ptr, tx_key] : cces)
+                    {
+                        TxKey key_copy = tx_key.Clone();
+                        auto status = ccs.FetchRecord(table_name,
+                                                      tbl_schema,
+                                                      std::move(tx_key),
+                                                      cce_ptr,
+                                                      ng_id,
+                                                      ng_term,
+                                                      nullptr,
+                                                      partition_id);
+                        // FetchRecord adds its own pin on success.
+                        // Release ours to balance.
+                        if (status ==
+                            store::DataStoreHandler::DataStoreOpStatus::Success)
+                        {
+                            cce_ptr->GetKeyGapLockAndExtraData()->ReleasePin();
+                        }
+                        else
+                        {
+                            // FetchRecord did not add a pin. Keep ours
+                            // and re-trigger reopen for this CCE.
+                            ccs.RequestPartitionReopen(table_name,
+                                                       partition_id,
+                                                       std::move(key_copy),
+                                                       cce_ptr,
+                                                       tbl_schema,
+                                                       ng_id,
+                                                       ng_term);
+                        }
+                    }
+                    return true;
+                });
+        });
+}
+#endif
+
 store::DataStoreHandler::DataStoreOpStatus CcShard::FetchSnapshot(
     const TableName &table_name,
     const TableSchema *tbl_schema,

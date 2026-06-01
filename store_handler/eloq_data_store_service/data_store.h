@@ -22,6 +22,7 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
 #include <iomanip>
 #include <iostream>
 #include <string>
@@ -111,6 +112,19 @@ public:
 
     virtual bool CompactStore()
     {
+        return false;
+    }
+
+    virtual bool ReopenPartition(const std::string &table_name,
+                                 int32_t partition_id,
+                                 bool is_hash_partitioned,
+                                 uint64_t pending_time_us,
+                                 std::function<void()> callback)
+    {
+        if (callback)
+        {
+            callback();
+        }
         return false;
     }
 

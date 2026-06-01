@@ -126,6 +126,16 @@ public:
         return false;
     }
 
+    virtual DataStoreOpStatus ReopenPartition(const TableName &table_name,
+                                              int32_t partition_id,
+                                              std::function<void()> callback)
+    {
+        (void) table_name;
+        (void) partition_id;
+        (void) callback;
+        return DataStoreOpStatus::Error;
+    }
+
     /**
      * @param write_time is used to maintain idempotence. For eventual
      * consistency storage, records with larger write_time wins. Cassandra
