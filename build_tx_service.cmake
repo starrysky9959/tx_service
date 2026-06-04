@@ -29,6 +29,11 @@ message(NOTICE "STATISTICS : ${STATISTICS}")
 find_package(Protobuf REQUIRED)
 find_package(GFLAGS REQUIRED)
 find_package(MIMALLOC REQUIRED)
+find_package(absl CONFIG REQUIRED)
+eloq_assert_under_prefix(MIMALLOC_INCLUDE_DIR "mimalloc include directory")
+eloq_assert_target_under_prefix(absl::btree "Abseil btree")
+eloq_assert_target_under_prefix(absl::flat_hash_map "Abseil flat_hash_map")
+eloq_assert_target_under_prefix(absl::span "Abseil span")
 
 # boost_context for FlushDataWorker coroutine refactor (Phase 1)
 if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND CMAKE_CXX_FLAGS MATCHES "fsanitize=address")
@@ -81,6 +86,7 @@ if(CMAKE_COMPILER_IS_GNUCC)
     if((NOT BRPC_INCLUDE_PATH) OR(NOT BRPC_LIB))
         message(FATAL_ERROR "Fail to find brpc")
     endif()
+    eloq_assert_under_prefix(BRPC_LIB "brpc library")
 
     if(BRPC_WITH_GLOG)
         message(NOTICE "TX BRPC WITH GLOG")
@@ -90,6 +96,7 @@ if(CMAKE_COMPILER_IS_GNUCC)
         if((NOT GLOG_INCLUDE_PATH) OR(NOT GLOG_LIB))
             message(FATAL_ERROR "Fail to find glog")
         endif()
+        eloq_assert_under_prefix(GLOG_LIB "glog library")
 
         include_directories(${GLOG_INCLUDE_PATH})
         set(LINK_LIB ${LINK_LIB} ${GLOG_LIB})
@@ -125,16 +132,8 @@ execute_process(
     WORKING_DIRECTORY ${LOG_PROTO_SRC}
 )
 
-if(BUILD_SHARED_LIBS)
-    set(ABSL_ENABLE_INSTALL ON CACHE INTERNAL "Install Abseil libs" FORCE)
-else()
-    set(ABSL_ENABLE_INSTALL OFF CACHE INTERNAL "Install Abseil libs" FORCE)
-endif()
-add_subdirectory(tx_service/abseil-cpp)
-
 message(${TX_SERVICE_SOURCE_DIR})
 set(INCLUDE_DIR
-    ${TX_SERVICE_SOURCE_DIR}/abseil-cpp
     ${TX_SERVICE_SOURCE_DIR}/include
     ${TX_SERVICE_SOURCE_DIR}/include/cc
     ${TX_SERVICE_SOURCE_DIR}/include/remote
@@ -230,76 +229,6 @@ if(WITH_JEMALLOC)
     target_link_libraries(txservice PUBLIC jemalloc_cfg)
 endif()
 
-# if(FORK_HM_PROCESS)
-#     include(FetchContent)
-#     # Import yaml-cpp library used by host manager
-#     FetchContent_Declare(
-#         yaml-cpp
-#         GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
-#         GIT_TAG yaml-cpp-0.7.0 # Can be a tag (yaml-cpp-x.x.x), a commit hash, or a branch name (master)
-#     )
-#     FetchContent_MakeAvailable(yaml-cpp)
-
-#     SET(HOST_MANAGER_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/tx_service/raft_host_manager)
-#     set(HOST_MANAGER_INCLUDE_DIR
-#         ${HOST_MANAGER_SOURCE_DIR}/include
-#         ${TX_SERVICE_SOURCE_DIR}/tx-log-protos
-#         ${OPENSSL_INCLUDE_DIR}
-#         ${LOG_PROTO_SRC}
-#         ${PROTO_SRC})
-
-#     if(CMAKE_COMPILER_IS_GNUCC)
-#         set(HOST_MANAGER_INCLUDE_DIR ${HOST_MANAGER_INCLUDE_DIR}
-#             ${BRPC_INCLUDE_PATH}
-#             ${BRAFT_INCLUDE_PATH}
-#             ${GLOG_INCLUDE_PATH}
-#             ${GFLAGS_INCLUDE_PATH})
-#     endif()
-
-#     set(HOST_MANAGER_LINK_LIB ${HOST_MANAGER_LINK_LIB} ${PROTOBUF_LIBRARIES})
-
-#     if(CMAKE_COMPILER_IS_GNUCC)
-#         find_path(BRAFT_INCLUDE_PATH NAMES braft/raft.h)
-#         find_library(BRAFT_LIB NAMES braft)
-
-#         if((NOT BRAFT_INCLUDE_PATH) OR(NOT BRAFT_LIB))
-#             message(FATAL_ERROR "Fail to find braft")
-#         endif()
-
-#         set(HOST_MANAGER_LINK_LIB ${HOST_MANAGER_LINK_LIB}
-#             ${GFLAGS_LIBRARY}
-#             ${LEVELDB_LIB}
-#             ${BRAFT_LIB}
-#             ${BRPC_LIB}
-#             ${OPENSSL_LIB})
-#         find_path(GLOG_INCLUDE_PATH NAMES glog/logging.h)
-#         find_library(GLOG_LIB NAMES glog VERSION ">=0.6.0" REQUIRED)
-
-#         if((NOT GLOG_INCLUDE_PATH) OR(NOT GLOG_LIB))
-#             message(FATAL_ERROR "Fail to find glog")
-#         endif()
-
-#         include_directories(${GLOG_INCLUDE_PATH})
-#         set(HOST_MANAGER_LINK_LIB ${HOST_MANAGER_LINK_LIB} ${GLOG_LIB})
-#     endif()
-
-#     SET(RaftHM_SOURCES
-#         ${HOST_MANAGER_SOURCE_DIR}/src/main.cpp
-#         ${HOST_MANAGER_SOURCE_DIR}/src/raft_host_manager_service.cpp
-#         ${HOST_MANAGER_SOURCE_DIR}/src/raft_host_manager.cpp
-#         ${HOST_MANAGER_SOURCE_DIR}/src/ini.c
-#         ${HOST_MANAGER_SOURCE_DIR}/src/INIReader.cpp
-#         ${LOG_PROTO_SRC}/log_agent.cpp
-#         ${LOG_PROTO_SRC}/${LOG_PROTO_NAME}.pb.cc
-#         ${PROTO_CC_FILES}
-#     )
-
-#     include_directories(${HOST_MANAGER_INCLUDE_DIR})
-#     MYSQL_ADD_EXECUTABLE(host_manager ${RaftHM_SOURCES} DESTINATION ${INSTALL_SBINDIR} COMPONENT Server)
-#     target_link_libraries(host_manager ${HOST_MANAGER_LINK_LIB} yaml-cpp::yaml-cpp)
-
-# endif()
-
 if (FORK_HM_PROCESS)
     SET (HOST_MANAGER_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/tx_service/raft_host_manager)
     set(HOST_MANAGER_INCLUDE_DIR
@@ -322,6 +251,8 @@ if (FORK_HM_PROCESS)
     if ((NOT BRAFT_INCLUDE_PATH) OR (NOT BRAFT_LIB))
         message (FATAL_ERROR "Fail to find braft")
     endif()
+    eloq_assert_under_prefix(BRAFT_LIB "braft library")
+    set(HOST_MANAGER_INCLUDE_DIR ${HOST_MANAGER_INCLUDE_DIR} ${BRAFT_INCLUDE_PATH})
     set(HOST_MANAGER_LINK_LIB ${HOST_MANAGER_LINK_LIB}
         ${GFLAGS_LIBRARY}
         ${GPERFTOOLS_LIBRARIES}
@@ -334,6 +265,7 @@ if (FORK_HM_PROCESS)
     if((NOT GLOG_INCLUDE_PATH) OR (NOT GLOG_LIB))
         message(FATAL_ERROR "Fail to find glog")
     endif()
+    eloq_assert_under_prefix(GLOG_LIB "glog library")
     include_directories(${GLOG_INCLUDE_PATH})
     set(HOST_MANAGER_LINK_LIB ${HOST_MANAGER_LINK_LIB} ${GLOG_LIB})
 
@@ -348,19 +280,16 @@ if (FORK_HM_PROCESS)
         ${LOG_PROTO_SRC}/${LOG_PROTO_NAME}.pb.cc
         )
 
-    include(FetchContent)
-
-    # Import yaml-cpp library used by host manager
-    FetchContent_Declare(
-            yaml-cpp
-            GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
-            GIT_TAG yaml-cpp-0.7.0 # Can be a tag (yaml-cpp-x.x.x), a commit hash, or a branch name (master)
-    )
-    FetchContent_MakeAvailable(yaml-cpp)
-    if(BUILD_SHARED_LIBS)
-        install(TARGETS yaml-cpp EXPORT yaml-cppTargets DESTINATION lib)
+    find_package(yaml-cpp CONFIG REQUIRED)
+    if(TARGET yaml-cpp::yaml-cpp)
+        set(YAML_CPP_TARGET yaml-cpp::yaml-cpp)
+    elseif(TARGET yaml-cpp)
+        set(YAML_CPP_TARGET yaml-cpp)
+    else()
+        message(FATAL_ERROR "yaml-cpp package did not provide a usable CMake target")
     endif()
-    set(HOST_MANAGER_LINK_LIB ${HOST_MANAGER_LINK_LIB} yaml-cpp::yaml-cpp)
+    eloq_assert_target_under_prefix(${YAML_CPP_TARGET} "yaml-cpp")
+    set(HOST_MANAGER_LINK_LIB ${HOST_MANAGER_LINK_LIB} ${YAML_CPP_TARGET})
 
     include_directories(${HOST_MANAGER_INCLUDE_DIR})
     add_executable(host_manager ${RaftHM_SOURCES})
