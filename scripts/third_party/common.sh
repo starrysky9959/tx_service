@@ -37,6 +37,17 @@ run_with_retry() {
     return 1
 }
 
+run_privileged() {
+    if [ "$(id -u)" -eq 0 ]; then
+        run "$@"
+    elif command -v sudo >/dev/null 2>&1; then
+        run sudo "$@"
+    else
+        echo "This script must run as root or with sudo available: $*" >&2
+        exit 1
+    fi
+}
+
 ensure_dirs() {
     mkdir -p "${THIRD_PARTY_SRC}" "${THIRD_PARTY_BUILD}" "${THIRD_PARTY_PREFIX}"
 }

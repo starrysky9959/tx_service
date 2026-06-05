@@ -7,9 +7,9 @@ export DEBIAN_FRONTEND=noninteractive
 export TZ="${TZ:-UTC}"
 
 if [ -f "${THIRD_PARTY_ROOT}/system-packages.ubuntu2404.txt" ]; then
-    run sudo apt-get update
-    xargs -a "${THIRD_PARTY_ROOT}/system-packages.ubuntu2404.txt" \
-        sudo apt-get install -y --no-install-recommends
+    run_privileged apt-get update
+    mapfile -t system_packages < "${THIRD_PARTY_ROOT}/system-packages.ubuntu2404.txt"
+    run_privileged apt-get install -y --no-install-recommends "${system_packages[@]}"
 fi
 
 if git -C "${DATA_SUBSTRATE_ROOT}" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
