@@ -46,6 +46,11 @@ AWS_CRT_SUBMODULES=(
     crt/aws-c-sdkutils
 )
 
+PROMETHEUS_CPP_SUBMODULES=(
+    3rdparty/civetweb
+    3rdparty/googletest
+)
+
 SUBMODULE_DEPTH="${ELOQ_THIRD_PARTY_SUBMODULE_DEPTH:-1}"
 SUBMODULE_FILTER="${ELOQ_THIRD_PARTY_SUBMODULE_FILTER-blob:none}"
 
@@ -66,4 +71,6 @@ run_with_retry git "${SUBMODULE_UPDATE_ARGS[@]}" "${TOP_LEVEL_THIRD_PARTY_SUBMOD
 run_with_retry git -C "${THIRD_PARTY_SRC}/aws-sdk-cpp" "${SUBMODULE_UPDATE_ARGS[@]}" crt/aws-crt-cpp
 run_with_retry git -C "${THIRD_PARTY_SRC}/aws-sdk-cpp/crt/aws-crt-cpp" \
     "${SUBMODULE_UPDATE_ARGS[@]}" "${AWS_CRT_SUBMODULES[@]}"
+run_with_retry git -C "${THIRD_PARTY_SRC}/prometheus-cpp" \
+    "${SUBMODULE_UPDATE_ARGS[@]}" "${PROMETHEUS_CPP_SUBMODULES[@]}"
 run_with_retry git -C "${THIRD_PARTY_SRC}/usearch" "${SUBMODULE_UPDATE_ARGS[@]}" fp16
