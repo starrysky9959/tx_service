@@ -24,8 +24,11 @@ restore_patched_sources() {
 trap restore_patched_sources EXIT
 
 cd "${THIRD_PARTY_SRC}/lua"
-run make linux
-run make INSTALL_TOP="${THIRD_PARTY_PREFIX}" install
+run make -j"${JOBS}" all
+mkdir -p "${THIRD_PARTY_PREFIX}/bin" "${THIRD_PARTY_PREFIX}/include" "${THIRD_PARTY_PREFIX}/lib"
+run cp lua "${THIRD_PARTY_PREFIX}/bin/lua"
+run cp liblua.a "${THIRD_PARTY_PREFIX}/lib/liblua.a"
+run cp lua.h luaconf.h lualib.h lauxlib.h "${THIRD_PARTY_PREFIX}/include/"
 
 cp "${THIRD_PARTY_SRC}/abseil-cpp/absl/base/options.h" \
     "${ABSEIL_OPTIONS_BACKUP}"
