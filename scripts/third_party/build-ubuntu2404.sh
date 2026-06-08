@@ -29,6 +29,7 @@ mkdir -p "${THIRD_PARTY_PREFIX}/bin" "${THIRD_PARTY_PREFIX}/include" "${THIRD_PA
 run cp lua "${THIRD_PARTY_PREFIX}/bin/lua"
 run cp liblua.a "${THIRD_PARTY_PREFIX}/lib/liblua.a"
 run cp lua.h luaconf.h lualib.h lauxlib.h "${THIRD_PARTY_PREFIX}/include/"
+cleanup_source_after_build lua
 
 cp "${THIRD_PARTY_SRC}/abseil-cpp/absl/base/options.h" \
     "${ABSEIL_OPTIONS_BACKUP}"
@@ -42,21 +43,26 @@ restore_patched_sources
 if git -C "${THIRD_PARTY_SRC}/abseil-cpp" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     run git -C "${THIRD_PARTY_SRC}/abseil-cpp" diff --exit-code -- absl/base/options.h
 fi
+cleanup_source_after_build abseil-cpp
 
 cmake_build_install protobuf "${THIRD_PARTY_SRC}/protobuf" \
     -DCMAKE_BUILD_TYPE=Release \
     -DBUILD_SHARED_LIBS=ON \
     -Dprotobuf_BUILD_TESTS=OFF \
     -Dprotobuf_ABSL_PROVIDER=package
+cleanup_source_after_build protobuf
 
 cmake_build_install glog "${THIRD_PARTY_SRC}/glog" \
     -DCMAKE_BUILD_TYPE=Release \
-    -DBUILD_SHARED_LIBS=ON
+    -DBUILD_SHARED_LIBS=ON \
+    -DWITH_GTEST=OFF
+cleanup_source_after_build glog
 
 cd "${THIRD_PARTY_SRC}/liburing"
 run ./configure --prefix="${THIRD_PARTY_PREFIX}" --cc=gcc --cxx=g++
 run make -j"${JOBS}"
 run make install
+cleanup_source_after_build liburing
 
 run cmake -S "${THIRD_PARTY_SRC}/brpc" -B "${THIRD_PARTY_BUILD}/brpc" \
     -DCMAKE_INSTALL_PREFIX="${THIRD_PARTY_PREFIX}" \
@@ -90,6 +96,7 @@ cmake_build_install mimalloc "${THIRD_PARTY_SRC}/mimalloc" \
 
 cd "${THIRD_PARTY_SRC}/cuckoofilter"
 run make PREFIX="${THIRD_PARTY_PREFIX}" install
+cleanup_source_after_build cuckoofilter
 
 cmake_build_install aws-sdk-cpp "${THIRD_PARTY_SRC}/aws-sdk-cpp" \
     -DCMAKE_BUILD_TYPE=RelWithDebInfo \
@@ -97,24 +104,31 @@ cmake_build_install aws-sdk-cpp "${THIRD_PARTY_SRC}/aws-sdk-cpp" \
     -DBUILD_SHARED_LIBS=ON \
     -DFORCE_SHARED_CRT=OFF \
     -DBUILD_ONLY="dynamodb;sqs;s3;kinesis;kafka;transfer"
+cleanup_source_after_build aws-sdk-cpp
 
 cd "${THIRD_PARTY_SRC}/rocksdb"
 run make -j"${JOBS}" shared_lib USE_RTTI=1 PORTABLE=1 ROCKSDB_DISABLE_TCMALLOC=1 ROCKSDB_DISABLE_JEMALLOC=1
 run make install-shared PREFIX="${THIRD_PARTY_PREFIX}"
+cleanup_source_after_build rocksdb
 
 cmake_build_install prometheus-cpp "${THIRD_PARTY_SRC}/prometheus-cpp" \
     -DCMAKE_BUILD_TYPE=Release \
-    -DBUILD_SHARED_LIBS=ON
+    -DBUILD_SHARED_LIBS=ON \
+    -DENABLE_PUSH=OFF \
+    -DENABLE_TESTING=OFF
+cleanup_source_after_build prometheus-cpp
 
 cmake_build_install Catch2 "${THIRD_PARTY_SRC}/Catch2" \
     -DCMAKE_BUILD_TYPE=Release \
     -DCATCH_BUILD_EXAMPLES=OFF \
     -DBUILD_TESTING=OFF
+cleanup_source_after_build Catch2
 
 cmake_build_install re2 "${THIRD_PARTY_SRC}/re2" \
     -DCMAKE_BUILD_TYPE=Release \
     -DBUILD_SHARED_LIBS=ON \
     -DRE2_BUILD_TESTING=OFF
+cleanup_source_after_build re2
 
 cmake_build_install grpc "${THIRD_PARTY_SRC}/grpc" \
     -DCMAKE_BUILD_TYPE=Release \
@@ -127,6 +141,7 @@ cmake_build_install grpc "${THIRD_PARTY_SRC}/grpc" \
     -DgRPC_RE2_PROVIDER=package \
     -DgRPC_SSL_PROVIDER=package \
     -DgRPC_ZLIB_PROVIDER=package
+cleanup_source_after_build grpc
 
 cmake_build_install crc32c "${THIRD_PARTY_SRC}/crc32c" \
     -DCMAKE_BUILD_TYPE=Release \
@@ -134,12 +149,14 @@ cmake_build_install crc32c "${THIRD_PARTY_SRC}/crc32c" \
     -DCRC32C_BUILD_TESTS=OFF \
     -DCRC32C_BUILD_BENCHMARKS=OFF \
     -DCRC32C_USE_GLOG=OFF
+cleanup_source_after_build crc32c
 
 cmake_build_install nlohmann-json "${THIRD_PARTY_SRC}/nlohmann-json" \
     -DCMAKE_BUILD_TYPE=Release \
     -DBUILD_SHARED_LIBS=ON \
     -DBUILD_TESTING=OFF \
     -DJSON_BuildTests=OFF
+cleanup_source_after_build nlohmann-json
 
 cmake_build_install google-cloud-cpp "${THIRD_PARTY_SRC}/google-cloud-cpp" \
     -DCMAKE_BUILD_TYPE=Release \
@@ -148,20 +165,24 @@ cmake_build_install google-cloud-cpp "${THIRD_PARTY_SRC}/google-cloud-cpp" \
     -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
     -DGOOGLE_CLOUD_CPP_ENABLE_EXAMPLES=OFF \
     -DGOOGLE_CLOUD_CPP_ENABLE=bigtable,storage
+cleanup_source_after_build google-cloud-cpp
 
 mkdir -p "${THIRD_PARTY_PREFIX}/include"
 run rsync -a "${THIRD_PARTY_SRC}/usearch/include/" "${THIRD_PARTY_PREFIX}/include/"
 run rsync -a "${THIRD_PARTY_SRC}/usearch/fp16/include/" "${THIRD_PARTY_PREFIX}/include/"
+cleanup_source_after_build usearch
 
 mkdir -p "${THIRD_PARTY_PREFIX}/include/catch2"
 run cp "${THIRD_PARTY_SRC}/FakeIt/single_header/catch/fakeit.hpp" \
     "${THIRD_PARTY_PREFIX}/include/catch2/fakeit.hpp"
+cleanup_source_after_build FakeIt
 
 cmake_build_install yaml-cpp "${THIRD_PARTY_SRC}/yaml-cpp" \
     -DCMAKE_BUILD_TYPE=Release \
     -DYAML_CPP_BUILD_TESTS=OFF \
     -DYAML_CPP_BUILD_TOOLS=OFF \
     -DYAML_BUILD_SHARED_LIBS=ON
+cleanup_source_after_build yaml-cpp
 
 cd "${THIRD_PARTY_SRC}/rocksdb-cloud"
 run make shared_lib -j"${JOBS}" LIBNAME=librocksdb-cloud-aws USE_RTTI=1 USE_AWS=1 ROCKSDB_DISABLE_TCMALLOC=1 ROCKSDB_DISABLE_JEMALLOC=1

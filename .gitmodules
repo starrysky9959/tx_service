@@ -7,18 +7,6 @@
 [submodule "store_handler/eloq_data_store_service/eloqstore"]
 	path = store_handler/eloq_data_store_service/eloqstore
 	url = https://github.com/eloqdata/eloqstore.git
-[submodule "third_party/src/lua"]
-	path = third_party/src/lua
-	url = https://github.com/lua/lua.git
-[submodule "third_party/src/protobuf"]
-	path = third_party/src/protobuf
-	url = https://github.com/protocolbuffers/protobuf.git
-[submodule "third_party/src/glog"]
-	path = third_party/src/glog
-	url = https://github.com/eloqdata/glog.git
-[submodule "third_party/src/liburing"]
-	path = third_party/src/liburing
-	url = https://github.com/axboe/liburing.git
 [submodule "third_party/src/brpc"]
 	path = third_party/src/brpc
 	url = https://github.com/eloqdata/brpc.git
@@ -28,48 +16,6 @@
 [submodule "third_party/src/mimalloc"]
 	path = third_party/src/mimalloc
 	url = https://github.com/eloqdata/mimalloc.git
-[submodule "third_party/src/cuckoofilter"]
-	path = third_party/src/cuckoofilter
-	url = https://github.com/eloqdata/cuckoofilter.git
-[submodule "third_party/src/aws-sdk-cpp"]
-	path = third_party/src/aws-sdk-cpp
-	url = https://github.com/aws/aws-sdk-cpp.git
-[submodule "third_party/src/rocksdb"]
-	path = third_party/src/rocksdb
-	url = https://github.com/facebook/rocksdb.git
-[submodule "third_party/src/prometheus-cpp"]
-	path = third_party/src/prometheus-cpp
-	url = https://github.com/jupp0r/prometheus-cpp.git
-[submodule "third_party/src/Catch2"]
-	path = third_party/src/Catch2
-	url = https://github.com/catchorg/Catch2.git
-[submodule "third_party/src/abseil-cpp"]
-	path = third_party/src/abseil-cpp
-	url = https://github.com/abseil/abseil-cpp.git
-[submodule "third_party/src/re2"]
-	path = third_party/src/re2
-	url = https://github.com/google/re2.git
-[submodule "third_party/src/grpc"]
-	path = third_party/src/grpc
-	url = https://github.com/grpc/grpc.git
-[submodule "third_party/src/crc32c"]
-	path = third_party/src/crc32c
-	url = https://github.com/google/crc32c.git
-[submodule "third_party/src/nlohmann-json"]
-	path = third_party/src/nlohmann-json
-	url = https://github.com/nlohmann/json.git
-[submodule "third_party/src/google-cloud-cpp"]
-	path = third_party/src/google-cloud-cpp
-	url = https://github.com/googleapis/google-cloud-cpp.git
-[submodule "third_party/src/FakeIt"]
-	path = third_party/src/FakeIt
-	url = https://github.com/eranpeer/FakeIt.git
 [submodule "third_party/src/rocksdb-cloud"]
 	path = third_party/src/rocksdb-cloud
 	url = https://github.com/eloqdata/rocksdb-cloud.git
-[submodule "third_party/src/usearch"]
-	path = third_party/src/usearch
-	url = https://github.com/unum-cloud/usearch.git
-[submodule "third_party/src/yaml-cpp"]
-	path = third_party/src/yaml-cpp
-	url = https://github.com/jbeder/yaml-cpp.git
